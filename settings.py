@@ -5,6 +5,7 @@ import pygame as pg
 KATAKANA_ALPHABET_SIZE = 96
 KATAKANA_ALPHABET_START = int('0x30a0', 16)
 KATAKANA_ALPHABET = [chr(KATAKANA_ALPHABET_START + i) for i in range(KATAKANA_ALPHABET_SIZE)]
+THE_MATRIX_ALPHABET = ['T', 'H', 'E', 'M', 'A', 'R', 'I', 'X']
 
 DISPLAY_RES = DISPLAY_W, DISPLAY_H = 1600, 900
 FONT_SIZE = 25
@@ -45,10 +46,14 @@ def set_font():
     dark_green_symbols = [f.render(char, True, pg.Color(0, 128, 0)) for char in KATAKANA_ALPHABET]
     very_light_green_symbols = [f.render(char, True, pg.Color(150, 255, 150)) for char in KATAKANA_ALPHABET]
 
-    return green_symbols, light_green_symbols, dark_green_symbols, very_light_green_symbols
+    f = pg.font.SysFont("Courier", FONT_SIZE)
+    f.bold = True
+    the_matrix_symbols = [f.render(char, True, pg.Color(150, 255, 150)) for char in THE_MATRIX_ALPHABET]
+
+    return green_symbols, light_green_symbols, dark_green_symbols, very_light_green_symbols, the_matrix_symbols
 
 
 def initialize():
     surface, clock = set_display()
-    green_symbols, light_green_symbols, dark_green_symbols, very_light_green_symbols = set_font()
-    return surface, clock, green_symbols, light_green_symbols, dark_green_symbols, very_light_green_symbols
+    green_symbols, light_green_symbols, dark_green_symbols, very_light_green_symbols, the_matrix_symbols = set_font()
+    return surface, clock, green_symbols, light_green_symbols, dark_green_symbols, very_light_green_symbols, the_matrix_symbols

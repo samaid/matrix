@@ -6,6 +6,7 @@ green_symbols = np.empty(shape=KATAKANA_ALPHABET_SIZE, dtype=np.int32)
 light_green_symbols = np.empty(shape=KATAKANA_ALPHABET_SIZE, dtype=np.int32)
 dark_green_symbols = np.empty(shape=KATAKANA_ALPHABET_SIZE, dtype=np.int32)
 very_light_green_symbols = np.empty(shape=KATAKANA_ALPHABET_SIZE, dtype=np.int32)
+the_matrix_symbols = np.empty(shape=8, dtype=np.int32)
 
 
 def random_age(n):
@@ -25,7 +26,7 @@ class SymbolStream:
         self.pos_x = pos_x  # Horizontal position is fixed for each stream
         self.pos_y = -FONT_SIZE*self.n_symbols  # Vertical initial position is at the top of the screen
 
-    def draw(self, surface):
+    def draw_stream_but_last_symbol(self, surface):
         y = self.pos_y
         for i in range(self.n_symbols - 1):
             age = self.symbol_ages[i]
@@ -39,7 +40,10 @@ class SymbolStream:
 
             surface.blit(smb, (self.pos_x, y))
             y += FONT_SIZE
+        return y
 
+    def draw(self, surface):
+        y = self.draw_stream_but_last_symbol(surface)
         # Symbol at the very bottom always remains very light green
         smb = very_light_green_symbols[self.symbols[self.n_symbols-1]]
         surface.blit(smb, (self.pos_x, y))
@@ -53,6 +57,46 @@ class SymbolStream:
         self.symbol_ages = np.where(self.symbol_ages == SYMBOL_AGE_OLD, random_age(self.n_symbols), self.symbol_ages)
 
 
+class TheMatrixStream(SymbolStream):
+    def __init__(self, pos_x, max_size, symbol):
+        self.symbol = symbol
+        super().__init__(pos_x, max_size)
+
+    def draw_stream_but_last_symbol(self, surface):
+        y = self.pos_y
+        for i in range(self.n_symbols - 1):
+            if y >= (DISPLAY_H-FONT_SIZE)//2:
+                break
+
+            age = self.symbol_ages[i]
+
+            if age >= SYMBOL_AGE_YONG:
+                smb = light_green_symbols[self.symbols[i]]
+            elif age >= SYMBOL_AGE_MATURE:
+                smb = green_symbols[self.symbols[i]]
+            else:
+                smb = dark_green_symbols[self.symbols[i]]
+
+            surface.blit(smb, (self.pos_x, y))
+            y += FONT_SIZE
+
+        return y
+
+    def draw(self, surface):
+        y = self.draw_stream_but_last_symbol(surface)
+        # Symbol at the very bottom always remains very light green
+        smb = the_matrix_symbols[self.symbol]
+
+        # The Matrix symbols displayed in the middle
+        y = min((DISPLAY_H-FONT_SIZE)//2, y)
+
+        surface.blit(smb, (self.pos_x, y))
+
+    def update(self):
+        super().update()
+        self.pos_y += 10
+
+
 class SymbolStreams:
     def __init__(self):
         self.age = 0
@@ -63,10 +107,16 @@ class SymbolStreams:
 
     def can_spawn(self, idx):
         can = True
-        for stream in self.streams[idx]:
-            if stream.pos_y < FONT_SIZE:
-                can = False
 
+        # For final seconds of intro we do not allow new streams at positions of THE MATRIX symbols
+        if self.age >= STREAM_AGE_DECAY*2:
+            idx_left = N_STREAMS//2 - 10
+            if idx_left <= idx <= idx_left+5 or idx_left+9 <= idx <= idx_left+20:
+                can = False
+        else:
+            for stream in self.streams[idx]:
+                if stream.pos_y < FONT_SIZE:
+                    can = False
         return can
 
     def remove_fallen(self):
@@ -119,13 +169,34 @@ class SymbolStreams:
 
 
 def main():
-    global green_symbols, light_green_symbols, dark_green_symbols, very_light_green_symbols
+    global green_symbols, light_green_symbols, dark_green_symbols, very_light_green_symbols, the_matrix_symbols
 
-    ds, clk, green_symbols, light_green_symbols, dark_green_symbols, very_light_green_symbols = initialize()
+    ds, clk, green_symbols, light_green_symbols, dark_green_symbols, very_light_green_symbols, the_matrix_symbols = initialize()
     transparent = pg.Surface(DISPLAY_RES)
-    transparent.set_alpha(ALPHA_CHANNEL)
+
+    alpha = ALPHA_CHANNEL
+    transparent.set_alpha(alpha)
 
     streams = SymbolStreams()
+
+    x = DISPLAY_W//2 - 10*STREAM_WIDTH
+    t_stream = TheMatrixStream(x, 20, 0)
+    x += 2*STREAM_WIDTH
+    h_stream = TheMatrixStream(x, 20, 1)
+    x += 2*STREAM_WIDTH
+    e_stream = TheMatrixStream(x, 20, 2)
+    x += 4*STREAM_WIDTH
+    m_stream = TheMatrixStream(x, 20, 3)
+    x += 2*STREAM_WIDTH
+    a_stream = TheMatrixStream(x, 20, 4)
+    x += 2*STREAM_WIDTH
+    t2_stream = TheMatrixStream(x, 20, 0)
+    x += 2*STREAM_WIDTH
+    r_stream = TheMatrixStream(x, 20, 5)
+    x += 2*STREAM_WIDTH
+    i_stream = TheMatrixStream(x, 20, 6)
+    x += 2*STREAM_WIDTH
+    x_stream = TheMatrixStream(x, 20, 7)
 
     do_game = True
     while do_game:
@@ -137,10 +208,53 @@ def main():
         transparent.fill(pg.Color('black'))
         streams.draw(transparent)
 
+        if streams.age >= STREAM_AGE_DECAY*2:
+            t_stream.draw(transparent)
+            h_stream.draw(transparent)
+            e_stream.draw(transparent)
+            m_stream.draw(transparent)
+            a_stream.draw(transparent)
+            t2_stream.draw(transparent)
+            r_stream.draw(transparent)
+            i_stream.draw(transparent)
+            x_stream.draw(transparent)
+
         ds.blit(transparent, (0, 0))
 
         # Perform updates
         streams.update()
+
+        if streams.age >= STREAM_AGE_DECAY * 2:
+            t_stream.update()
+
+        if streams.age >= STREAM_AGE_DECAY * 2 + 50:
+            r_stream.update()
+
+        if streams.age >= STREAM_AGE_DECAY * 2 + 150:
+            m_stream.update()
+
+        if streams.age >= STREAM_AGE_DECAY * 2 + 250:
+            a_stream.update()
+
+        if streams.age >= STREAM_AGE_DECAY * 2 + 300:
+            h_stream.update()
+
+        if streams.age >= STREAM_AGE_DECAY * 2 + 350:
+            i_stream.update()
+
+        if streams.age >= STREAM_AGE_DECAY * 2 + 380:
+            e_stream.update()
+
+        if streams.age >= STREAM_AGE_DECAY * 2 + 420:
+            x_stream.update()
+
+        if streams.age >= STREAM_AGE_DECAY * 2 + 460:
+            t2_stream.update()
+
+        if streams.age >= STREAM_AGE_DECAY * 2 + 600:
+            alpha -= 1
+            alpha = max(0, alpha)
+            transparent.set_alpha(alpha)
 
         # Prepare for next frame
         pg.display.flip()
